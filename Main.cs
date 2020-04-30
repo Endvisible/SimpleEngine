@@ -50,10 +50,10 @@ namespace SimpleEngine
                 Size: new Vector2(32, 32),
 
                 Layout: new float[][] {
-                    new float[]{ 6.3003f, 5.3000f, 4.3300f },
-                    new float[]{ 7.0003f, 0,       3.0300f },
-                    new float[]{ 7.0003f, 0,       3.0300f },
-                    new float[]{ 8.0033f, 1.0030f, 2.0330f }},
+                    new float[]{ 6.3003f, 5.3000f, 5.3000f, 4.3300f },
+                    new float[]{ 7.0003f, 0,       0,       3.0300f },
+                    new float[]{ 7.0003f, 0,       0,       3.0300f },
+                    new float[]{ 8.0033f, 1.0030f, 1.0030f, 2.0330f }},
 
                 IsCentered: true,
                 Resize: BaseResize,

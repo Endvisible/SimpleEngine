@@ -98,9 +98,9 @@ namespace SimpleEngine
                             SpriteSheet: this.SpriteSheet,
                             Position: new Vector2(
                                 (int)colNumber * Size.X * Resize
-                                     - (IsCentered ? Width / 2 : 0),
+                                     - (IsCentered ? Width / 2 - Size.X * Resize / 2 : 0),
                                 (int)rowNumber * this.Size.Y * this.Resize
-                                     - (IsCentered ? Height / row.Count() + Size.Y * Resize / 2 : 0)),
+                                     - (IsCentered ? Height / 2 - Size.Y * Resize / 2 : 0)),
                             Size: this.Size,
 
                             Resize: this.Resize,
