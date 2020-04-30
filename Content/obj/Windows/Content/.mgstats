@@ -1,0 +1,3 @@
+Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
+"C:/Users/Hunter/source/repos/SimpleEngine/SimpleEngine/Content/char.png","C:/Users/Hunter/source/repos/SimpleEngine/SimpleEngine/Content/bin/Windows/Content/char.xnb","TextureProcessor","Texture2DContent",4094,131157,0.6569208
+"C:/Users/Hunter/source/repos/SimpleEngine/SimpleEngine/Content/tileset-indoors.png","C:/Users/Hunter/source/repos/SimpleEngine/SimpleEngine/Content/bin/Windows/Content/tileset-indoors.xnb","TextureProcessor","Texture2DContent",3089,147541,0.0189474
