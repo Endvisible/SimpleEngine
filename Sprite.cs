@@ -49,6 +49,9 @@ namespace SimpleEngine
                 Rectangle.Width / 2,
                 Rectangle.Height / 2);
         } }
+
+        public int Width { get { return this.Rectangle.Width; } }
+        public int Height { get { return this.Rectangle.Height; } }
         #endregion
 
         public Tile(
@@ -199,7 +202,7 @@ namespace SimpleEngine
         private double FrameTime = 0;          // frame time counter
         private double FrameLength = 1f / 30f; // frame rate
 
-        private readonly List<string> Directions;   // keys held (in order)
+        private List<string> Directions;   // keys held (in order)
         private Tuple<int[], int> CurrentAnimation; // animation currently playing
         private Scene Scene;               // scene in which sprite is an actor
 
@@ -241,11 +244,11 @@ namespace SimpleEngine
             this.HitBoxSize = HitBoxSize;
 
             this.Speed = Speed * Resize;
+            this.Directions = new List<string>(capacity: 4);
 
             SpeedMultiplier = 1;
 
             Facing = "down";
-            Directions = new List<string>(capacity: 4);
 
             if (!(HitBoxSize == default(Vector2)))
                 this.HitBoxSize = SetHitBox(HitBoxSize);
@@ -279,9 +282,44 @@ namespace SimpleEngine
             scene.Actors.Add(name, this);
         }
 
-        public bool GetCollision(string direction)
+        public bool GetCollision(string direction, Vector2 position)
         {
-            return true;
+            foreach (Tile tile in this.Scene.Tiles)
+            {
+                if (!tile.IsBoundary) continue;
+
+                if (Directions.Contains("up") && direction == "up")
+                    foreach (Rectangle boundary in tile.Boundaries.Values
+                        .Where(i => i.Y < HitBox.Y
+                               && i.Left < HitBox.Right - 1*Resize
+                               && i.Right > HitBox.Left + 1*Resize))
+                        if (HitBox.Intersects(boundary)) return true;
+
+                if (Directions.Contains("down") && direction == "down")
+                    foreach (Rectangle boundary in tile.Boundaries.Values
+                        .Where(i => i.Y >= HitBox.Y
+                               && i.Left < HitBox.Right - 1*Resize
+                               && i.Right > HitBox.Left + 1*Resize))
+                        if (HitBox.Intersects(boundary)) return true;
+
+                if (Directions.Contains("left") && direction == "left")
+                    foreach (Rectangle boundary in tile.Boundaries.Values
+                        .Where(i => i.X < HitBox.X
+                               && i.Bottom > HitBox.Top + 1*Resize
+                               && i.Top < HitBox.Bottom - 1*Resize))
+                        if (HitBox.Intersects(boundary)) return true;
+
+                if (Directions.Contains("right") && direction == "right")
+                    foreach (Rectangle boundary in tile.Boundaries.Values
+                        .Where(i => i.X > HitBox.X
+                               && i.Bottom > HitBox.Top + 1*Resize
+                               && i.Top < HitBox.Bottom - 1*Resize))
+                        if (HitBox.Intersects(boundary)) return true;
+
+
+
+            }
+            return false;
         }
 
         public void Move(GameTime gameTime, KeyHandler keyHandler)
@@ -291,7 +329,7 @@ namespace SimpleEngine
             else if (SpeedMultiplier != 1) SpeedMultiplier = 1;
 
             // list of direction keys being held
-            List<string> Directions = keyHandler.Directions;
+            Directions = keyHandler.Directions;
 
             // first direction held gets priority
             string primaryDirection;
@@ -314,15 +352,15 @@ namespace SimpleEngine
             else
             {
 
-                //if (Directions.Contains("up"))    nextPosition.Y -= movementSpeed;
-                //if (Directions.Contains("down"))  nextPosition.Y += movementSpeed;
-                //if (Directions.Contains("left"))  nextPosition.X -= movementSpeed;
-                //if (Directions.Contains("right")) nextPosition.X += movementSpeed;
+                if (Directions.Contains("up")) nextPosition.Y -= movementSpeed;
+                if (Directions.Contains("down")) nextPosition.Y += movementSpeed;
+                if (Directions.Contains("left")) nextPosition.X -= movementSpeed;
+                if (Directions.Contains("right")) nextPosition.X += movementSpeed;
 
-                if (Directions.Contains("up")) Position.Y -= movementSpeed;
-                if (Directions.Contains("down")) Position.Y += movementSpeed;
-                if (Directions.Contains("left")) Position.X -= movementSpeed;
-                if (Directions.Contains("right")) Position.X += movementSpeed;
+                if (Directions.Contains("up") && !GetCollision("up", nextPosition)) Position.Y = nextPosition.Y;
+                if (Directions.Contains("down") && !GetCollision("down", nextPosition)) Position.Y = nextPosition.Y;
+                if (Directions.Contains("left") && !GetCollision("left", nextPosition)) Position.X = nextPosition.X;
+                if (Directions.Contains("right") && !GetCollision("right", nextPosition)) Position.X = nextPosition.X;
 
                 Facing = primaryDirection;
                 SetAnimation($"walk_{Facing}");
@@ -390,8 +428,6 @@ namespace SimpleEngine
                 (int)HitBoxSize.X,
                 (int)HitBoxSize.Y);
             #endregion
-
-            Console.WriteLine(Position);
 
 
             // increment frame time for animation

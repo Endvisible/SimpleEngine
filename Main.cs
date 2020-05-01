@@ -75,7 +75,7 @@ namespace SimpleEngine
                 IsCentered: true,
                 ColumnCount: 16,
 
-                Speed: 20,
+                Speed: 40,
                 HitBoxSize: new Vector2(24, 31)
             );
 
