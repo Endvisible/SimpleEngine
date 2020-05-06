@@ -14,11 +14,11 @@ namespace SimpleEngine
         Texture2D _debugTexture;
 
         Scene CurrentScene;
+        Camera Camera;
 
         Scene livingRoom;
         Sprite player;
 
-        int BaseResize = 4;
         int ScreenWidth { get { return Window.ClientBounds.Width; } }
         int ScreenHeight { get { return Window.ClientBounds.Height; } }
 
@@ -43,6 +43,7 @@ namespace SimpleEngine
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
             keyHandler = new KeyHandler();
+            Camera = new Camera(GraphicsDevice.Viewport) { Zoom = 3 };
 
 
             livingRoom = new Scene(
@@ -50,28 +51,27 @@ namespace SimpleEngine
                 Size: new Vector2(32, 32),
 
                 Layout: new float[][] {
-                    new float[]{ 6.3003f, 5.3000f, 5.3000f, 4.3300f },
-                    new float[]{ 7.0003f, 0,       0,       3.0300f },
-                    new float[]{ 7.0003f, 0,       0,       3.0300f },
-                    new float[]{ 8.0033f, 1.0030f, 1.0030f, 2.0330f }},
+                    new float[]{ 6, 5, 5, 4 },
+                    new float[]{ 7, 0, 0, 3 },
+                    new float[]{ 7, 0, 0, 3 },
+                    new float[]{ 8, 1, 1, 2 }},
 
-                IsCentered: true,
-                Resize: BaseResize,
+                IsCentered: false,
                 ColumnCount: 9
             );
-
-            livingRoom.Offset(new Vector2(
-                ScreenWidth / 2,
-                ScreenHeight / 2));
             
             CurrentScene = livingRoom;
+            CurrentScene.AddBoundary(new Rectangle(0, 0, CurrentScene.Width, 3));
+            CurrentScene.AddBoundary(new Rectangle(CurrentScene.Width-3, 3, 3, CurrentScene.Height-3));
+            CurrentScene.AddBoundary(new Rectangle(0, CurrentScene.Height-3, CurrentScene.Width, 3));
+            CurrentScene.AddBoundary(new Rectangle(0, 3, 3, CurrentScene.Height - 3));
+
 
             player = new Sprite(
                 SpriteSheet: Content.Load<Texture2D>("char"),
                 Position: CurrentScene.Center,
                 Size: new Vector2(32),
 
-                Resize: BaseResize,
                 IsCentered: true,
                 ColumnCount: 16,
 
@@ -144,6 +144,7 @@ namespace SimpleEngine
 
             player.Update(gameTime, keyHandler);
 
+            Camera.Update(player);
             base.Update(gameTime);
         }
 
@@ -151,33 +152,32 @@ namespace SimpleEngine
         {
             GraphicsDevice.Clear(Color.Black);
 
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.Begin(
+                samplerState: SamplerState.PointClamp,
+                transformMatrix: Camera.Transform);
 
             livingRoom.Draw(spriteBatch);
-            DrawBoundaries(spriteBatch, livingRoom);
+            DrawBoundaries(spriteBatch);
             player.Draw(spriteBatch);
 
-            DrawCenter(spriteBatch);
+            //DrawCenter(spriteBatch);
 
             spriteBatch.End();
 
             base.Draw(gameTime);
         }
 
-        public void DrawBoundaries(SpriteBatch spriteBatch, Scene scene)
+        public void DrawBoundaries(SpriteBatch spriteBatch)
         {
-            foreach(Tile tile in scene.Tiles)
-                if (tile.IsBoundary)
-                    foreach (Rectangle boundary in tile.Boundaries.Values)
-                        spriteBatch.Draw(_debugTexture, boundary, Color.White);
-
+            foreach (Rectangle boundary in CurrentScene.Boundaries)
+                spriteBatch.Draw(_debugTexture, boundary, Color.White);
             spriteBatch.Draw(_debugTexture, player.HitBox, Color.White);
         }
 
         public void DrawCenter(SpriteBatch spriteBatch) {
             for (int i = 0; i < ScreenWidth; i += player.Rectangle.Width)
                 spriteBatch.Draw(_debugTexture, new Rectangle(i, 0, 1, ScreenHeight), new Color(128, 128, 128, 128));
-            for (int i = -6*BaseResize; i < ScreenHeight; i += player.Rectangle.Height)
+            for (int i = -6; i < ScreenHeight; i += player.Rectangle.Height)
                 spriteBatch.Draw(_debugTexture, new Rectangle(0, i, ScreenWidth, 1), new Color(128, 128, 128, 128));
             spriteBatch.Draw(_debugTexture, new Rectangle(ScreenWidth / 2, 0, 1, ScreenHeight), Color.White);
             spriteBatch.Draw(_debugTexture, new Rectangle(0, ScreenHeight / 2, ScreenWidth, 1), Color.White);

@@ -19,28 +19,23 @@ namespace SimpleEngine
         protected int ColumnCount;       // number of columns in spritesheet
         protected int Frame;             // frame number
 
-        protected int Resize;   // size multiplier
-
         protected bool IsCentered;       // tile origin is center
-        protected int[] CollisionBounds; // hitbox widths (inset)
 
         public Vector2 Position;         // position on screen
-        public bool IsBoundary;          // tile has hitbox
 
         public Vector2 Size; // size in pixels
         
         public Rectangle FrameSource; // sourceRectangle
         public Rectangle FrameOutput; // destinationRectangle
 
-        public Dictionary<string, Rectangle> Boundaries;
 
         public Rectangle Rectangle
         { get {
             return new Rectangle(
                 (int)Position.X,
                 (int)Position.Y,
-                (int)Size.X * Resize,
-                (int)Size.Y * Resize);
+                (int)Size.X,
+                (int)Size.Y);
         } }
 
         public Vector2 Center
@@ -59,31 +54,19 @@ namespace SimpleEngine
             Vector2 Position,
             Vector2 Size,
 
-            int Resize = 1,
             int Frame = 0,
             int ColumnCount = 1,
-            int[] CollisionBounds = null,
-            bool IsCentered = false,
-            bool IsBoundary = false
+            bool IsCentered = false
             )
         {
             this.SpriteSheet = SpriteSheet;
             this.Size = Size;
             this.Position = Position;
 
-            this.Resize = Resize;
             this.ColumnCount = ColumnCount;
             this.Frame = Frame;
 
             this.IsCentered = IsCentered;
-            this.IsBoundary = IsBoundary;
-
-            if (!(CollisionBounds is null)) 
-                this.CollisionBounds = 
-                    (from item in CollisionBounds select item * this.Resize).ToArray<int>();
-            else this.CollisionBounds = new int[] { 0, 0, 0, 0 };
-
-            if (this.IsBoundary) Boundaries = SetBoundaries(this.CollisionBounds);
         }
 
         #region Functions
@@ -104,56 +87,6 @@ namespace SimpleEngine
                 yIndex * Size.Y
                 );
         }
-
-        // set boundaries around tile
-        private Dictionary<string, Rectangle> SetBoundaries(int[] collisionBounds)
-        {
-            if (!IsBoundary) return new Dictionary<string, Rectangle> { };
-
-            Dictionary<string, Rectangle> Boundaries = new Dictionary<string, Rectangle> { };
-
-            // Add top boundary inset
-            if (collisionBounds[0] != 0)
-                Boundaries.Add("top",
-                    new Rectangle(
-                        Rectangle.X - (IsCentered ? Rectangle.Width / 2 : 0),
-                        Rectangle.Y - (IsCentered ? Rectangle.Height / 2 : 0),
-                        Rectangle.Width,
-                        collisionBounds[0]));
-
-            // Add right boundary inset
-            if (collisionBounds[1] != 0)
-                Boundaries.Add("right",
-                    new Rectangle(
-                        Rectangle.X
-                            + Rectangle.Width - collisionBounds[1]
-                            - (IsCentered ? Rectangle.Width / 2 : 0),
-                        Rectangle.Y - (IsCentered ? Rectangle.Height / 2 : 0),
-                        collisionBounds[1],
-                        Rectangle.Height));
-
-            // Add bottom boundary inset
-            if (collisionBounds[2] != 0)
-                Boundaries.Add("bottom",
-                    new Rectangle(
-                        Rectangle.X - (IsCentered ? Rectangle.Width / 2 : 0),
-                        Rectangle.Y
-                            + Rectangle.Height - collisionBounds[2]
-                            - (IsCentered ? Rectangle.Height / 2 : 0),
-                        Rectangle.Width,
-                        collisionBounds[2]));
-
-            // Add left boundary inset
-            if (collisionBounds[3] != 0)
-                Boundaries.Add("left",
-                    new Rectangle(
-                        Rectangle.X - (IsCentered ? Rectangle.Width / 2 : 0),
-                        Rectangle.Y - (IsCentered ? Rectangle.Height / 2 : 0),
-                        collisionBounds[3],
-                        Rectangle.Height));
-
-            return Boundaries;
-        }
         #endregion
 
         // update tile
@@ -170,8 +103,6 @@ namespace SimpleEngine
                 (int)Rectangle.Y,
                 (int)Rectangle.Width,
                 (int)Rectangle.Height);
-
-            Boundaries = SetBoundaries(CollisionBounds);
         }
 
         // draw to screen
@@ -191,6 +122,8 @@ namespace SimpleEngine
     public class Sprite : Tile
     {
         #region Sprite Parameters
+
+        private Vector2 nextPosition; // used to move sprite
 
         private float SpeedMultiplier; // speed multiplier
 
@@ -224,9 +157,7 @@ namespace SimpleEngine
             Vector2 Position,
             Vector2 Size,
             
-            int Resize = 1,
             bool IsCentered = false,
-            bool IsBoundary = false,
             int ColumnCount = 1,
             Vector2 HitBoxSize = new Vector2(),
 
@@ -237,20 +168,18 @@ namespace SimpleEngine
             this.Position = Position;
             this.Size = Size;
 
-            this.Resize = Resize;
             this.IsCentered = IsCentered;
-            this.IsBoundary = IsBoundary;
             this.ColumnCount = ColumnCount;
             this.HitBoxSize = HitBoxSize;
 
-            this.Speed = Speed * Resize;
+            this.Speed = Speed;
             this.Directions = new List<string>(capacity: 4);
 
             SpeedMultiplier = 1;
 
             Facing = "down";
 
-            if (!(HitBoxSize == default(Vector2)))
+            if (!(HitBoxSize == default))
                 this.HitBoxSize = SetHitBox(HitBoxSize);
             else this.HitBoxSize = SetHitBox(this.Size);
 
@@ -262,8 +191,8 @@ namespace SimpleEngine
         private Vector2 SetHitBox(Vector2 size)
         {
             return new Vector2(
-                HitBoxSize.X = size.X * Resize,
-                HitBoxSize.Y = size.Y * Resize);
+                HitBoxSize.X = size.X,
+                HitBoxSize.Y = size.Y);
         }
 
         public void AddAnimation(string animationName, Tuple<int[], int> animationComponents)
@@ -284,40 +213,24 @@ namespace SimpleEngine
 
         public bool GetCollision(string direction, Vector2 position)
         {
-            foreach (Tile tile in this.Scene.Tiles)
+
+            /*
+            // adjust for sprite center
+            position += IsCentered ? 
+                new Vector2(0) :
+                new Vector2(HitBox.Center.X - Position.X, HitBox.Center.Y - Position.Y);
+            */
+
+            int collisionBuffer = 2;
+            Rectangle testSide = new Rectangle();
+            if (direction == "up") testSide = new Rectangle(HitBox.Left, HitBox.Top, HitBox.Width, 1);
+            if (direction == "down") testSide = new Rectangle(HitBox.Left, HitBox.Bottom + 1, HitBox.Width, 1);
+            if (direction == "left") testSide = new Rectangle(HitBox.Left - 1, HitBox.Top, 1, HitBox.Height);
+            if (direction == "right") testSide = new Rectangle(HitBox.Right + 1, HitBox.Top, 1, HitBox.Height);
+
+            foreach (Rectangle boundary in this.Scene.Boundaries)
             {
-                if (!tile.IsBoundary) continue;
-
-                if (Directions.Contains("up") && direction == "up")
-                    foreach (Rectangle boundary in tile.Boundaries.Values
-                        .Where(i => i.Y < HitBox.Y
-                               && i.Left < HitBox.Right - 1*Resize
-                               && i.Right > HitBox.Left + 1*Resize))
-                        if (HitBox.Intersects(boundary)) return true;
-
-                if (Directions.Contains("down") && direction == "down")
-                    foreach (Rectangle boundary in tile.Boundaries.Values
-                        .Where(i => i.Y >= HitBox.Y
-                               && i.Left < HitBox.Right - 1*Resize
-                               && i.Right > HitBox.Left + 1*Resize))
-                        if (HitBox.Intersects(boundary)) return true;
-
-                if (Directions.Contains("left") && direction == "left")
-                    foreach (Rectangle boundary in tile.Boundaries.Values
-                        .Where(i => i.X < HitBox.X
-                               && i.Bottom > HitBox.Top + 1*Resize
-                               && i.Top < HitBox.Bottom - 1*Resize))
-                        if (HitBox.Intersects(boundary)) return true;
-
-                if (Directions.Contains("right") && direction == "right")
-                    foreach (Rectangle boundary in tile.Boundaries.Values
-                        .Where(i => i.X > HitBox.X
-                               && i.Bottom > HitBox.Top + 1*Resize
-                               && i.Top < HitBox.Bottom - 1*Resize))
-                        if (HitBox.Intersects(boundary)) return true;
-
-
-
+                if (testSide.Intersects(boundary)) return true;
             }
             return false;
         }
@@ -331,7 +244,7 @@ namespace SimpleEngine
             // list of direction keys being held
             Directions = keyHandler.Directions;
 
-            // first direction held gets priority
+            // first direction held gets priority (used for animation)
             string primaryDirection;
             if (keyHandler.Directions.Count > 0)
                 primaryDirection = keyHandler.Directions[0];
@@ -343,7 +256,8 @@ namespace SimpleEngine
                 * (float)gameTime.ElapsedGameTime.TotalSeconds
                 * SpeedMultiplier;
 
-            Vector2 nextPosition = Position;
+
+            nextPosition = Position;
 
             // if sprite is not moving, set animation to idle facing
             if (keyHandler.Directions.Count == 0) SetAnimation($"idle_{Facing}");
@@ -357,10 +271,9 @@ namespace SimpleEngine
                 if (Directions.Contains("left")) nextPosition.X -= movementSpeed;
                 if (Directions.Contains("right")) nextPosition.X += movementSpeed;
 
-                if (Directions.Contains("up") && !GetCollision("up", nextPosition)) Position.Y = nextPosition.Y;
-                if (Directions.Contains("down") && !GetCollision("down", nextPosition)) Position.Y = nextPosition.Y;
-                if (Directions.Contains("left") && !GetCollision("left", nextPosition)) Position.X = nextPosition.X;
-                if (Directions.Contains("right") && !GetCollision("right", nextPosition)) Position.X = nextPosition.X;
+                foreach (string direction in Directions)
+                    if (!GetCollision(direction, nextPosition))
+                        Position = nextPosition;
 
                 Facing = primaryDirection;
                 SetAnimation($"walk_{Facing}");
